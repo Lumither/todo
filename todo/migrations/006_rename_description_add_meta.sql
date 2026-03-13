@@ -1,0 +1,2 @@
+ALTER TABLE tasks RENAME COLUMN description TO item;
+ALTER TABLE tasks ADD COLUMN meta TEXT DEFAULT '{}';
