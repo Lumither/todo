@@ -10,7 +10,7 @@ from todo.formatting import (
     print_task_detail,
     print_task_list,
 )
-from todo.models import NS_RESERVED
+from todo.models import NS_DEFAULT, NS_RESERVED
 
 
 def _parse_tags(value: str) -> list[str]:
@@ -38,6 +38,19 @@ def _ok_or_not_found(
             print_error(nf)
 
 
+def _add_shared_flags(p: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    p.add_argument(
+        "--json", action="store_true",
+        dest="json_output", default=argparse.SUPPRESS,
+        help=argparse.SUPPRESS,
+    )
+    p.add_argument(
+        "-n", "--namespace", dest="namespace",
+        default=argparse.SUPPRESS, help=argparse.SUPPRESS,
+    )
+    return p
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="A simple CLI todo list",
@@ -53,7 +66,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", help="Commands")
 
-    p_add = sub.add_parser("add", help="Add a new task")
+    p_add = _add_shared_flags(sub.add_parser("add", help="Add a new task"))
     p_add.add_argument("item", nargs="+", help="Task description")
     p_add.add_argument(
         "-p", "--priority", type=int, default=0,
@@ -72,9 +85,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Metadata as JSON string",
     )
 
-    p_list = sub.add_parser(
+    p_list = _add_shared_flags(sub.add_parser(
         "list", aliases=["ls"], help="List tasks",
-    )
+    ))
     p_list.add_argument(
         "-a", "--all", action="store_true",
         help="Include completed tasks",
@@ -83,21 +96,21 @@ def _build_parser() -> argparse.ArgumentParser:
         "-t", "--tag", metavar="TAG", help="Filter by tag",
     )
 
-    p_show = sub.add_parser("show", help="Show task details")
+    p_show = _add_shared_flags(sub.add_parser("show", help="Show task details"))
     p_show.add_argument("id", type=int, help="Task ID")
 
-    p_done = sub.add_parser(
+    p_done = _add_shared_flags(sub.add_parser(
         "done", aliases=["complete"],
         help="Mark task as completed",
-    )
+    ))
     p_done.add_argument("id", type=int, help="Task ID")
 
-    p_undone = sub.add_parser(
+    p_undone = _add_shared_flags(sub.add_parser(
         "undone", aliases=["reopen"], help="Reopen a task",
-    )
+    ))
     p_undone.add_argument("id", type=int, help="Task ID")
 
-    p_edit = sub.add_parser("edit", help="Edit a task")
+    p_edit = _add_shared_flags(sub.add_parser("edit", help="Edit a task"))
     p_edit.add_argument("id", type=int, help="Task ID")
     p_edit.add_argument("item", nargs="*", help="New description")
     p_edit.add_argument(
@@ -116,18 +129,18 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Metadata as JSON string",
     )
 
-    p_del = sub.add_parser(
+    p_del = _add_shared_flags(sub.add_parser(
         "delete", aliases=["rm"], help="Delete a task",
-    )
+    ))
     p_del.add_argument("id", type=int, help="Task ID")
 
-    sub.add_parser("clear", help="Delete all completed tasks")
+    _add_shared_flags(sub.add_parser("clear", help="Delete all completed tasks"))
 
-    p_tag = sub.add_parser("tag", help="Add tags to a task")
+    p_tag = _add_shared_flags(sub.add_parser("tag", help="Add tags to a task"))
     p_tag.add_argument("id", type=int, help="Task ID")
     p_tag.add_argument("tags", help="Comma-separated tags to add")
 
-    sub.add_parser("ns", help="List all namespaces")
+    _add_shared_flags(sub.add_parser("ns", help="List all namespaces"))
 
     return parser
 
@@ -183,7 +196,7 @@ def _cmd_list(args, use_json: bool, ns: str) -> None:
             else "No pending tasks.",
         )
     else:
-        print_task_list(tasks, show_namespace=(ns == "all"))
+        print_task_list(tasks, show_namespace=(ns is None))
 
 
 def _cmd_show(args, use_json: bool, ns: str) -> None:
@@ -294,7 +307,7 @@ def _cmd_tag(args, use_json: bool, ns: str) -> None:
 def _cmd_ns(_args, use_json: bool, ns: str) -> None:
     namespaces = models.list_namespaces()
     if use_json:
-        _json_out({"namespaces": namespaces, "current": ns})
+        _json_out({"namespaces": namespaces, "current": ns or "all"})
     elif not namespaces:
         print_error("No namespaces found.")
     else:
@@ -328,19 +341,23 @@ def main():
     parser = _build_parser()
     args = parser.parse_args()
     use_json = args.json_output
-    ns = args.namespace or os.environ.get("TODO_NAMESPACE", "default")
-
-    if ns in NS_RESERVED and args.command in WRITE_COMMANDS:
-        msg = f"Namespace '{ns}' is read-only"
-        if use_json:
-            _json_out({"ok": False, "error": msg})
-        else:
-            print_error(msg)
-        return
+    explicit_ns = args.namespace or os.environ.get("TODO_NAMESPACE")
 
     cmd = args.command
     if cmd is None:
         cmd = "list"
+
+    if cmd in WRITE_COMMANDS:
+        ns = explicit_ns or NS_DEFAULT
+        if ns in NS_RESERVED:
+            msg = f"Namespace '{ns}' is read-only"
+            if use_json:
+                _json_out({"ok": False, "error": msg})
+            else:
+                print_error(msg)
+            return
+    else:
+        ns = explicit_ns
 
     handler = COMMANDS.get(cmd)
     if handler:

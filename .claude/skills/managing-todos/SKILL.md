@@ -29,7 +29,7 @@ Decision process:
 3. Otherwise → **ask the user** which namespace to use
 4. Before asking, run `uv run todo --json ns` to show them existing namespaces as options
 
-Reserved: `all` is read-only (lists tasks across all namespaces). `default` is the fallback.
+Listing without `-n` shows all tasks across namespaces. Writing without `-n` goes to `default`.
 
 ## Creating tasks — your reasoning process
 
@@ -101,10 +101,10 @@ Rules:
 uv run todo --json -n NS add "Item" -p PRIORITY -d "YYYY-MM-DD" -t "tag1,tag2" -m '{"key":"val"}'
 
 # List tasks
-uv run todo --json -n NS ls              # pending only
-uv run todo --json -n NS ls -a           # include completed
-uv run todo --json -n NS ls -t TAG       # filter by tag
-uv run todo --json -n all ls             # all namespaces
+uv run todo --json ls                    # all pending tasks (all namespaces)
+uv run todo --json -n NS ls             # pending in specific namespace
+uv run todo --json ls -a                 # include completed
+uv run todo --json ls -t TAG             # filter by tag
 
 # Show / complete / reopen / delete
 uv run todo --json -n NS show ID

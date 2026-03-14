@@ -4,8 +4,7 @@ from datetime import datetime
 from todo.db import get_connection
 
 NS_DEFAULT = "default"
-NS_ALL = "all"
-NS_RESERVED = {NS_ALL}
+NS_RESERVED: set[str] = set()
 
 
 def _now() -> str:
@@ -50,14 +49,14 @@ def add_task(
 def list_tasks(
     show_all: bool = False,
     tag: str | None = None,
-    namespace: str = NS_DEFAULT,
+    namespace: str | None = None,
 ) -> list[dict]:
     conn = get_connection()
     query = "SELECT * FROM tasks"
     conditions: list[str] = []
     params: list = []
 
-    if namespace != NS_ALL:
+    if namespace is not None:
         conditions.append("namespace = ?")
         params.append(namespace)
 
@@ -87,9 +86,9 @@ def list_tasks(
     return result
 
 
-def get_task(task_id: int, namespace: str = NS_DEFAULT) -> dict | None:
+def get_task(task_id: int, namespace: str | None = None) -> dict | None:
     conn = get_connection()
-    if namespace == NS_ALL:
+    if namespace is None:
         row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
     else:
         row = conn.execute(
