@@ -1,6 +1,6 @@
 ---
 name: managing-todos
-description: Manage tasks with priorities, due dates, tags, and attachments using a CLI todo app backed by SQLite. Use when the user asks to create, list, complete, edit, delete, or organize tasks, or when they mention todos, task management, or to-do lists.
+description: Manage tasks with priorities, due dates, tags, and meta using a CLI todo app backed by SQLite. Use when the user asks to create, list, complete, edit, delete, or organize tasks, or when they mention todos, task management, or to-do lists.
 ---
 
 # Task Management
@@ -65,7 +65,7 @@ Returns `{"ok": true, "id": N, "item": "..."}`.
 todo --json show 1
 ```
 
-Returns full task object with tags and attachments.
+Returns full task object with tags and meta.
 
 ### Complete / reopen
 
@@ -95,20 +95,13 @@ todo --json clear              # delete all completed tasks
 todo --json tag 1 "backend,api"   # append tags to task
 ```
 
-### Attachments
-
-```bash
-todo --json attach 1 /path/to/file -d "Description of attachment"
-todo --json detach 3              # remove attachment by attachment ID
-```
-
 ## JSON output contract
 
 All `--json` output goes to stdout.
 
 **Data queries** (`list`, `show`): return the raw object/array.
 
-**Mutations** (`add`, `done`, `edit`, `delete`, `tag`, `attach`, `detach`, `clear`): return `{"ok": true, ...}` on success.
+**Mutations** (`add`, `done`, `edit`, `delete`, `tag`, `clear`): return `{"ok": true, ...}` on success.
 
 **Errors**: return `{"ok": false, "error": "..."}`.
 
@@ -134,20 +127,9 @@ todo --json ls | jq '[.[] | select(.tags | contains(["work", "dev"]))]'
   "updated_at": "2026-03-12T16:00:00",
   "completed_at": null,
   "namespace": "work",
-  "tags": ["work", "dev"],
-  "attachments": [
-    {
-      "id": 1,
-      "task_id": 1,
-      "file_path": "/path/to/file",
-      "description": "optional description",
-      "created_at": "2026-03-12T16:00:00"
-    }
-  ]
+  "tags": ["work", "dev"]
 }
 ```
-
-Note: `attachments` is only present in `show` output. `list` output includes `tags` but not `attachments`.
 
 ## Workflow patterns
 

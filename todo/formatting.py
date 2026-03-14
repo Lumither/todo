@@ -1,10 +1,8 @@
 import json
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
@@ -23,7 +21,7 @@ def get_console() -> Console:
     return console
 
 
-def _due_style(due_at: Optional[str], compact: bool = False) -> tuple[str, str]:
+def _due_style(due_at: str | None, compact: bool = False) -> tuple[str, str]:
     if not due_at:
         return ("", "dim")
     try:
@@ -153,17 +151,6 @@ def print_task_detail(task: dict) -> None:
         meta_json = json.dumps(meta, indent=2, ensure_ascii=False)
         body.append_text(Text(meta_json, style="dim"))
         body.append("\n")
-
-    attachments = task.get("attachments", [])
-    if attachments:
-        body.append("\nAttachments:\n", style="bold")
-        for att in attachments:
-            desc = f" - {att['description']}" if att.get("description") else ""
-            body.append(f"  [{att['id']}] ", style="dim")
-            body.append(att["file_path"])
-            if desc:
-                body.append(desc, style="italic")
-            body.append("\n")
 
     title = f"Task #{task['id']}: {task['item']}"
     console.print(Panel(body, title=title, title_align="left", expand=False))

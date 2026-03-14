@@ -4,6 +4,7 @@ __pycache__/
 dist/
 build/
 *.egg
+/target
 
 .venv/
 .env
