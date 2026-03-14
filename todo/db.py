@@ -1,7 +1,11 @@
+import os
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "todo.db"
+_default_data_dir = Path.home() / ".local" / "share" / "todo"
+_data_dir = Path(os.environ.get("TODO_DATA_DIR", _default_data_dir))
+
+DB_PATH = _data_dir / "todo.db"
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 MIGRATION_TABLE = """
@@ -21,8 +25,10 @@ def _get_applied_versions(conn: sqlite3.Connection) -> set[int]:
 def _discover_migrations() -> list[tuple[int, str, Path]]:
     migrations = []
     for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
-        version = int(path.name.split("_", 1)[0])
-        migrations.append((version, path.name, path))
+        prefix = path.name.split("_", 1)[0]
+        if not prefix.isdigit():
+            continue
+        migrations.append((int(prefix), path.name, path))
     return migrations
 
 
@@ -42,6 +48,7 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
 
 
 def get_connection() -> sqlite3.Connection:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")

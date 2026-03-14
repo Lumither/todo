@@ -28,8 +28,7 @@ def add_task(
     namespace: str = NS_DEFAULT,
     meta: dict | None = None,
 ) -> int:
-    if namespace in NS_RESERVED:
-        raise ValueError(f"Cannot create tasks in reserved namespace '{namespace}'")
+    _guard_reserved(namespace)
     conn = get_connection()
     now = _now()
     meta_json = json.dumps(meta) if meta else "{}"
@@ -70,7 +69,7 @@ def list_tasks(
             " JOIN tags ON tags.id = task_tags.tag_id"
             " WHERE tags.name = ?)"
         )
-        params.append(tag)
+        params.append(tag.strip().lower())
 
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
@@ -81,6 +80,7 @@ def list_tasks(
     for row in rows:
         task = dict(row)
         task["tags"] = _get_task_tags(conn, row["id"])
+        task["meta"] = json.loads(task["meta"]) if task.get("meta") else {}
         result.append(task)
 
     conn.close()
@@ -108,7 +108,13 @@ def get_task(task_id: int, namespace: str = NS_DEFAULT) -> dict | None:
     return task
 
 
+def _guard_reserved(namespace: str) -> None:
+    if namespace in NS_RESERVED:
+        raise ValueError(f"Cannot modify tasks in reserved namespace '{namespace}'")
+
+
 def complete_task(task_id: int, namespace: str = NS_DEFAULT) -> bool:
+    _guard_reserved(namespace)
     conn = get_connection()
     now = _now()
     cursor = conn.execute(
@@ -122,6 +128,7 @@ def complete_task(task_id: int, namespace: str = NS_DEFAULT) -> bool:
 
 
 def uncomplete_task(task_id: int, namespace: str = NS_DEFAULT) -> bool:
+    _guard_reserved(namespace)
     conn = get_connection()
     now = _now()
     cursor = conn.execute(
@@ -143,6 +150,7 @@ def edit_task(
     namespace: str = NS_DEFAULT,
     meta: dict | None = None,
 ) -> bool:
+    _guard_reserved(namespace)
     conn = get_connection()
     sets = ["updated_at = ?"]
     params: list = [_now()]
@@ -172,6 +180,7 @@ def edit_task(
 
 
 def delete_task(task_id: int, namespace: str = NS_DEFAULT) -> bool:
+    _guard_reserved(namespace)
     conn = get_connection()
     cursor = conn.execute(
         "DELETE FROM tasks WHERE id = ? AND namespace = ?", (task_id, namespace)
@@ -182,6 +191,7 @@ def delete_task(task_id: int, namespace: str = NS_DEFAULT) -> bool:
 
 
 def clear_completed(namespace: str = NS_DEFAULT) -> int:
+    _guard_reserved(namespace)
     conn = get_connection()
     cursor = conn.execute(
         "DELETE FROM tasks WHERE completed = 1 AND namespace = ?", (namespace,)

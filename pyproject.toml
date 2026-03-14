@@ -1,6 +1,6 @@
 [project]
 name = "todo"
-version = "0.1.0"
+version = "1.0.0"
 description = "A simple CLI todo list application using SQLite"
 requires-python = ">=3.10"
 dependencies = ["rich>=13.0"]

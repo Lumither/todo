@@ -67,6 +67,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "-t", "--tags", metavar="TAG,TAG",
         help="Comma-separated tags",
     )
+    p_add.add_argument(
+        "-m", "--meta", metavar="JSON",
+        help="Metadata as JSON string",
+    )
 
     p_list = sub.add_parser(
         "list", aliases=["ls"], help="List tasks",
@@ -107,6 +111,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "-t", "--tags", metavar="TAG,TAG",
         help="Replace tags (comma-separated)",
     )
+    p_edit.add_argument(
+        "-m", "--meta", metavar="JSON",
+        help="Metadata as JSON string",
+    )
 
     p_del = sub.add_parser(
         "delete", aliases=["rm"], help="Delete a task",
@@ -124,8 +132,25 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _parse_meta(raw: str | None) -> dict | None | str:
+    """Parse --meta JSON string. Returns dict, None, or error string."""
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as e:
+        return f"Invalid JSON for --meta: {e}"
+
+
 def _cmd_add(args, use_json: bool, ns: str) -> None:
     tags = _parse_tags(args.tags) if args.tags else None
+    meta = _parse_meta(args.meta)
+    if isinstance(meta, str):
+        if use_json:
+            _json_out({"ok": False, "error": meta})
+        else:
+            print_error(meta)
+        return
     item = " ".join(args.item)
     task_id = models.add_task(
         item,
@@ -133,6 +158,7 @@ def _cmd_add(args, use_json: bool, ns: str) -> None:
         due_at=args.due,
         tags=tags,
         namespace=ns,
+        meta=meta,
     )
     if use_json:
         _json_out({
@@ -197,6 +223,13 @@ def _cmd_edit(args, use_json: bool, ns: str) -> None:
         _parse_tags(args.tags)
         if args.tags is not None else None
     )
+    meta = _parse_meta(args.meta)
+    if isinstance(meta, str):
+        if use_json:
+            _json_out({"ok": False, "error": meta})
+        else:
+            print_error(meta)
+        return
     ok = models.edit_task(
         args.id,
         item=item,
@@ -204,6 +237,7 @@ def _cmd_edit(args, use_json: bool, ns: str) -> None:
         due_at=args.due,
         tags=tags,
         namespace=ns,
+        meta=meta,
     )
     _ok_or_not_found(
         use_json, ok,
