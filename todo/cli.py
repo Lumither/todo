@@ -37,6 +37,7 @@ def _json_out(data: object) -> None:
 def _ok_or_not_found(
     use_json: bool, ok: bool,
     data: dict, msg: str, entity: str, eid: int,
+    ns: str | None = None,
 ) -> None:
     if ok:
         if use_json:
@@ -45,6 +46,10 @@ def _ok_or_not_found(
             print_success(msg)
     else:
         nf = f"{entity} #{eid} not found"
+        if ns is not None:
+            task = models.get_task(eid)
+            if task:
+                nf += f" in namespace '{ns}' (exists in '{task['namespace']}')"
         if use_json:
             _json_out({"ok": False, "error": nf})
         else:
@@ -229,7 +234,7 @@ def _cmd_done(args, use_json: bool, ns: str) -> None:
         use_json, ok,
         {"ok": True, "id": args.id, "namespace": ns},
         f"Completed task #{args.id}",
-        "Task", args.id,
+        "Task", args.id, ns=ns,
     )
 
 
@@ -239,7 +244,7 @@ def _cmd_undone(args, use_json: bool, ns: str) -> None:
         use_json, ok,
         {"ok": True, "id": args.id, "namespace": ns},
         f"Reopened task #{args.id}",
-        "Task", args.id,
+        "Task", args.id, ns=ns,
     )
 
 
@@ -269,7 +274,7 @@ def _cmd_edit(args, use_json: bool, ns: str) -> None:
         use_json, ok,
         {"ok": True, "id": args.id, "namespace": ns},
         f"Updated task #{args.id}",
-        "Task", args.id,
+        "Task", args.id, ns=ns,
     )
 
 
@@ -279,7 +284,7 @@ def _cmd_delete(args, use_json: bool, ns: str) -> None:
         use_json, ok,
         {"ok": True, "id": args.id, "namespace": ns},
         f"Deleted task #{args.id}",
-        "Task", args.id,
+        "Task", args.id, ns=ns,
     )
 
 
