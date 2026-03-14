@@ -13,6 +13,19 @@ from todo.formatting import (
 from todo.models import NS_DEFAULT, NS_RESERVED
 
 
+PRIORITY_ALIASES = {
+    "none": 0, "low": 1, "med": 2, "medium": 2,
+    "high": 3, "urgent": 4, "critical": 4,
+}
+
+
+def _parse_priority(value: str) -> int:
+    low = value.strip().lower()
+    if low in PRIORITY_ALIASES:
+        return PRIORITY_ALIASES[low]
+    return int(value)
+
+
 def _parse_tags(value: str) -> list[str]:
     return [t.strip() for t in value.split(",") if t.strip()]
 
@@ -69,8 +82,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p_add = _add_shared_flags(sub.add_parser("add", help="Add a new task"))
     p_add.add_argument("item", nargs="+", help="Task description")
     p_add.add_argument(
-        "-p", "--priority", type=int, default=0,
-        help="Priority (higher = more urgent)",
+        "-p", "--priority", type=_parse_priority, default=0,
+        help="Priority (0-4 or none/low/med/high/urgent)",
     )
     p_add.add_argument(
         "-d", "--due", metavar="DATETIME",
@@ -114,7 +127,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_edit.add_argument("id", type=int, help="Task ID")
     p_edit.add_argument("item", nargs="*", help="New description")
     p_edit.add_argument(
-        "-p", "--priority", type=int, help="New priority",
+        "-p", "--priority", type=_parse_priority, help="New priority (0-4 or none/low/med/high/urgent)",
     )
     p_edit.add_argument(
         "-d", "--due", metavar="DATETIME",
